@@ -181,7 +181,6 @@ async def health_check() -> dict:
     Returns:
         健康状态字典
     """
-    import psutil
     import tempfile
     from pathlib import Path
 
@@ -198,14 +197,12 @@ async def health_check() -> dict:
             write_permission = False
 
         # 系统资源信息
-        disk_usage = psutil.disk_usage("/")
-        memory = psutil.virtual_memory()
-
-        return {
-            "status": "healthy",
-            "timestamp": str(asyncio.get_event_loop().time()),
-            "write_permission": write_permission,
-            "system_resources": {
+        system_resources = {}
+        try:
+            import psutil
+            disk_usage = psutil.disk_usage("/")
+            memory = psutil.virtual_memory()
+            system_resources = {
                 "disk_total": disk_usage.total,
                 "disk_used": disk_usage.used,
                 "disk_free": disk_usage.free,
@@ -213,7 +210,15 @@ async def health_check() -> dict:
                 "memory_total": memory.total,
                 "memory_available": memory.available,
                 "memory_percent": memory.percent,
-            },
+            }
+        except ImportError:
+            system_resources = {"error": "psutil not installed"}
+
+        return {
+            "status": "healthy",
+            "timestamp": str(asyncio.get_event_loop().time()),
+            "write_permission": write_permission,
+            "system_resources": system_resources,
         }
     except Exception as e:
         return {
